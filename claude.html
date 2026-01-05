@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Externa Biosciences</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #050508;
+            --text: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.65);
+            --text-subtle: rgba(255, 255, 255, 0.4);
+            --blue: #5BA3C6;
+            --blue-light: #7FC4E6;
+            --orange: #E8985D;
+            --orange-light: #F5B98A;
+            --cream: #F5E6D3;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        html {
+            font-size: 16px;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* ============================================
+           WEBGL CANVAS
+           ============================================ */
+        
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* ============================================
+           ATMOSPHERIC OVERLAYS
+           ============================================ */
+
+        .atmosphere {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            background: 
+                radial-gradient(ellipse 80% 60% at 70% 50%, rgba(232, 152, 93, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 80% at 65% 45%, rgba(91, 163, 198, 0.03) 0%, transparent 40%),
+                radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(5, 5, 8, 0.95) 100%);
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(5, 5, 8, 0.4) 100%);
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none;
+            opacity: 0.018;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* Subtle scan lines for depth */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.003) 2px,
+                rgba(255, 255, 255, 0.003) 4px
+            );
+        }
+
+        /* ============================================
+           PAGE CONTENT
+           ============================================ */
+
+        .page {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        header {
+            padding: 44px 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            animation: fadeSlideDown 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+        }
+
+        @keyframes fadeSlideDown {
+            from { 
+                opacity: 0; 
+                transform: translateY(-20px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+
+        .logo-lockup {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .logo-mark {
+            height: 52px;
+            width: auto;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logo-lockup:hover .logo-mark {
+            transform: rotate(-3deg) scale(1.02);
+        }
+
+        .logo-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .logo-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .stealth-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stealth-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--orange);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--orange), 0 0 24px rgba(232, 152, 93, 0.5);
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 12px var(--orange), 0 0 24px rgba(232, 152, 93, 0.5);
+            }
+            50% { 
+                opacity: 0.6; 
+                transform: scale(0.9);
+                box-shadow: 0 0 8px var(--orange), 0 0 16px rgba(232, 152, 93, 0.3);
+            }
+        }
+
+        .stealth-text {
+            font-size: 0.875rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 400;
+        }
+
+        .location-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1875rem;
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+            transition: color 0.3s ease;
+        }
+
+        .location-indicator:hover {
+            color: var(--text);
+        }
+
+        .location-indicator svg {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+
+        .hero {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 64px;
+            max-width: 780px;
+        }
+
+        .hero-content {
+            opacity: 0;
+            animation: fadeSlideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+            width: 100%;
+        }
+
+        @keyframes fadeSlideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(50px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: clamp(2.75rem, 5.5vw, 4.25rem);
+            font-weight: 400;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+            margin-bottom: 28px;
+        }
+
+        .hero h1 em {
+            font-style: italic;
+            position: relative;
+            display: inline;
+        }
+
+        .hero h1 em .text {
+            background: linear-gradient(
+                135deg, 
+                var(--blue) 0%, 
+                var(--blue-light) 25%,
+                var(--cream) 50%,
+                var(--orange-light) 75%, 
+                var(--orange) 100%
+            );
+            background-size: 400% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 8s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-text {
+            font-size: 1.375rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            max-width: 520px;
+            margin-bottom: 52px;
+            font-weight: 300;
+        }
+
+        .contact-section {
+            opacity: 0;
+            animation: fadeSlideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+        }
+
+        .contact-label {
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            color: var(--text-subtle);
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+
+        .contact-link {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 1rem;
+            color: var(--text);
+            text-decoration: none;
+            padding: 20px 28px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .contact-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                135deg,
+                rgba(91, 163, 198, 0.08) 0%,
+                rgba(232, 152, 93, 0.08) 100%
+            );
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .contact-link:hover::before {
+            opacity: 1;
+        }
+
+        .contact-link:hover {
+            border-color: rgba(91, 163, 198, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 60px rgba(91, 163, 198, 0.1);
+        }
+
+        .contact-link svg {
+            position: relative;
+            z-index: 1;
+            width: 18px;
+            height: 18px;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover svg {
+            opacity: 1;
+        }
+
+        .contact-link span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .contact-link .arrow {
+            margin-left: 8px;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .contact-link:hover .arrow {
+            opacity: 0.6;
+            transform: translateX(0);
+        }
+
+        footer {
+            padding: 36px 64px;
+            display: flex;
+            justify-content: center;
+            opacity: 0;
+            animation: fadeIn 1s ease 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .footer-text {
+            font-size: 0.8125rem;
+            color: var(--text-subtle);
+            letter-spacing: 0.03em;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .hero {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 28px 32px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .logo-mark {
+                height: 44px;
+            }
+
+            .logo-text {
+                font-size: 1.2rem;
+            }
+
+            .hero {
+                padding: 40px 32px 80px;
+            }
+
+            .hero h1 {
+                font-size: clamp(2rem, 7vw, 2.75rem);
+            }
+
+            .hero-text {
+                font-size: 1.2rem;
+            }
+
+            .contact-link {
+                width: 100%;
+                justify-content: center;
+            }
+
+            footer {
+                padding: 24px 32px;
+            }
+        }
+
+        ::selection {
+            background: var(--blue);
+            color: var(--bg);
+        }
+    </style>
+</head>
+<body>
+    <!-- WebGL Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Atmospheric overlays -->
+    <div class="atmosphere"></div>
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- Page Content -->
+    <div class="page">
+        <header>
+            <div class="logo-lockup">
+                <img src="logo.png" alt="Externa Biosciences" class="logo-mark">
+                <div class="logo-info">
+                    <span class="logo-text">Externa Biosciences</span>
+                    <div class="stealth-indicator">
+                        <div class="stealth-dot"></div>
+                        <span class="stealth-text">In Stealth</span>
+                    </div>
+                </div>
+            </div>
+            <div class="location-indicator">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>Cambridge, MA</span>
+            </div>
+        </header>
+
+        <main class="hero">
+            <div class="hero-content">
+                <h1>The future of biologics is <em><span class="text">genetic code expansion</span></em></h1>
+                
+                <p class="hero-text">
+                    Any synthetic amino acid. Any protein. Any scale.
+                </p>
+
+                <div class="contact-section">
+                    <p class="contact-label">Partner with us</p>
+                    <a href="mailto:info@externa.bio" class="contact-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="16" x="2" y="4" rx="2"/>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        <span>info@externa.bio</span>
+                        <svg class="arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"/>
+                            <path d="m12 5 7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <span class="footer-text">© 2025 Externa Biosciences</span>
+        </footer>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        // ============================================
+        // PREMIUM 3D MOLECULAR SYNTHESIS VISUALIZATION
+        // ============================================
+
+        class MolecularSynthesis {
+            constructor() {
+                this.canvas = document.getElementById('webgl-canvas');
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: this.canvas, 
+                    antialias: true, 
+                    alpha: true 
+                });
+                
+                this.mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+                this.time = 0;
+                this.aminoAcids = [];
+                this.assembledParticles = [];
+                this.streamParticles = [];
+                
+                this.colors = {
+                    blue: new THREE.Color(0x5BA3C6),
+                    blueBright: new THREE.Color(0x7FC4E6),
+                    orange: new THREE.Color(0xE8985D),
+                    orangeBright: new THREE.Color(0xF5B98A),
+                    cream: new THREE.Color(0xF5E6D3),
+                    white: new THREE.Color(0xFFFFFF)
+                };
+
+                this.init();
+                this.createScene();
+                this.animate();
+                this.bindEvents();
+            }
+
+            init() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.setClearColor(0x000000, 0);
+                
+                this.camera.position.z = 50;
+                
+                // Offset to right side of screen
+                this.centerOffset = { x: 18, y: 0 };
+            }
+
+            createScene() {
+                this.createCore();
+                this.createAminoAcids();
+                this.createStreamParticles();
+                this.createAmbientParticles();
+            }
+
+            // Central assembly core - the "reactor"
+            createCore() {
+                this.coreGroup = new THREE.Group();
+                this.coreGroup.position.set(this.centerOffset.x, this.centerOffset.y, 0);
+                
+                // Inner bright core
+                const coreGeo = new THREE.SphereGeometry(2.5, 32, 32);
+                const coreMat = new THREE.MeshBasicMaterial({
+                    color: this.colors.cream,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                this.coreInner = new THREE.Mesh(coreGeo, coreMat);
+                this.coreGroup.add(this.coreInner);
+                
+                // Outer glow rings
+                for (let i = 0; i < 3; i++) {
+                    const ringGeo = new THREE.RingGeometry(4 + i * 2, 4.3 + i * 2, 64);
+                    const ringMat = new THREE.MeshBasicMaterial({
+                        color: i === 0 ? this.colors.orange : (i === 1 ? this.colors.cream : this.colors.blue),
+                        transparent: true,
+                        opacity: 0.12 - i * 0.03,
+                        side: THREE.DoubleSide
+                    });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2 + i * 0.2;
+                    ring.rotation.y = i * 0.3;
+                    this.coreGroup.add(ring);
+                }
+
+                // Volumetric glow effect using sprites
+                const glowTexture = this.createGlowTexture();
+                const glowMat = new THREE.SpriteMaterial({
+                    map: glowTexture,
+                    color: this.colors.orange,
+                    transparent: true,
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending
+                });
+                this.coreGlow = new THREE.Sprite(glowMat);
+                this.coreGlow.scale.set(25, 25, 1);
+                this.coreGroup.add(this.coreGlow);
+                
+                // Secondary blue glow
+                const glowMat2 = new THREE.SpriteMaterial({
+                    map: glowTexture,
+                    color: this.colors.blue,
+                    transparent: true,
+                    opacity: 0.15,
+                    blending: THREE.AdditiveBlending
+                });
+                const glow2 = new THREE.Sprite(glowMat2);
+                glow2.scale.set(35, 35, 1);
+                this.coreGroup.add(glow2);
+
+                this.scene.add(this.coreGroup);
+            }
+
+            createGlowTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                
+                const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.5)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 256, 256);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+
+            // Amino acids that drift toward center
+            createAminoAcids() {
+                const count = 18;
+                
+                for (let i = 0; i < count; i++) {
+                    this.spawnAminoAcid(i / count);
+                }
+            }
+
+            spawnAminoAcid(offset = 0) {
+                const colorChoice = Math.random();
+                let color;
+                if (colorChoice < 0.35) color = this.colors.blue;
+                else if (colorChoice < 0.7) color = this.colors.orange;
+                else color = this.colors.cream;
+
+                const size = 0.4 + Math.random() * 0.5;
+                
+                // Create amino acid as a small glowing sphere
+                const geo = new THREE.SphereGeometry(size, 16, 16);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                
+                // Add glow
+                const glowMat = new THREE.SpriteMaterial({
+                    map: this.createGlowTexture(),
+                    color: color,
+                    transparent: true,
+                    opacity: 0.4,
+                    blending: THREE.AdditiveBlending
+                });
+                const glow = new THREE.Sprite(glowMat);
+                glow.scale.set(size * 5, size * 5, 1);
+                mesh.add(glow);
+
+                // Spawn at random position on a sphere around center
+                const angle = Math.random() * Math.PI * 2;
+                const angle2 = Math.random() * Math.PI * 2;
+                const radius = 28 + Math.random() * 12;
+                
+                mesh.position.set(
+                    Math.cos(angle) * Math.cos(angle2) * radius + this.centerOffset.x,
+                    Math.sin(angle2) * radius * 0.6 + this.centerOffset.y,
+                    Math.sin(angle) * Math.cos(angle2) * radius * 0.3
+                );
+
+                const particle = {
+                    mesh,
+                    velocity: new THREE.Vector3(),
+                    life: offset,
+                    maxLife: 0.8 + Math.random() * 0.4,
+                    initialPos: mesh.position.clone(),
+                    color,
+                    size
+                };
+
+                this.aminoAcids.push(particle);
+                this.scene.add(mesh);
+            }
+
+            // Stream particles that flow toward center
+            createStreamParticles() {
+                const count = 150;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                const colors = new Float32Array(count * 3);
+                const sizes = new Float32Array(count);
+                const lifes = new Float32Array(count);
+                
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const angle2 = (Math.random() - 0.5) * Math.PI;
+                    const radius = 15 + Math.random() * 25;
+                    
+                    positions[i * 3] = Math.cos(angle) * Math.cos(angle2) * radius + this.centerOffset.x;
+                    positions[i * 3 + 1] = Math.sin(angle2) * radius * 0.5 + this.centerOffset.y;
+                    positions[i * 3 + 2] = Math.sin(angle) * Math.cos(angle2) * radius * 0.3;
+                    
+                    const colorChoice = Math.random();
+                    let color;
+                    if (colorChoice < 0.35) color = this.colors.blue;
+                    else if (colorChoice < 0.7) color = this.colors.orange;
+                    else color = this.colors.cream;
+                    
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                    
+                    sizes[i] = Math.random() * 3 + 1;
+                    lifes[i] = Math.random();
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.15,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.5,
+                    blending: THREE.AdditiveBlending,
+                    sizeAttenuation: true
+                });
+                
+                this.streamPoints = new THREE.Points(geometry, material);
+                this.streamLifes = lifes;
+                this.scene.add(this.streamPoints);
+            }
+
+            // Ambient floating particles for depth
+            createAmbientParticles() {
+                const count = 80;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                
+                for (let i = 0; i < count; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 30 - 10;
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.08,
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.25,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                this.ambientPoints = new THREE.Points(geometry, material);
+                this.scene.add(this.ambientPoints);
+            }
+
+            updateAminoAcids(delta) {
+                const targetPos = new THREE.Vector3(this.centerOffset.x, this.centerOffset.y, 0);
+                
+                for (let i = this.aminoAcids.length - 1; i >= 0; i--) {
+                    const p = this.aminoAcids[i];
+                    p.life += delta * 0.15;
+                    
+                    if (p.life >= p.maxLife) {
+                        // Respawn
+                        const angle = Math.random() * Math.PI * 2;
+                        const angle2 = Math.random() * Math.PI * 2;
+                        const radius = 28 + Math.random() * 12;
+                        
+                        p.mesh.position.set(
+                            Math.cos(angle) * Math.cos(angle2) * radius + this.centerOffset.x,
+                            Math.sin(angle2) * radius * 0.6 + this.centerOffset.y,
+                            Math.sin(angle) * Math.cos(angle2) * radius * 0.3
+                        );
+                        p.initialPos = p.mesh.position.clone();
+                        p.life = 0;
+                        p.maxLife = 0.8 + Math.random() * 0.4;
+                    }
+                    
+                    // Smooth interpolation toward center
+                    const t = p.life / p.maxLife;
+                    const eased = this.easeInOutCubic(t);
+                    
+                    p.mesh.position.lerpVectors(p.initialPos, targetPos, eased);
+                    
+                    // Add organic wobble
+                    const wobble = Math.sin(this.time * 2 + i) * 0.5 * (1 - eased);
+                    p.mesh.position.x += wobble;
+                    p.mesh.position.y += Math.cos(this.time * 1.5 + i) * 0.3 * (1 - eased);
+                    
+                    // Fade out near center
+                    p.mesh.material.opacity = 0.8 * (1 - eased * eased);
+                    p.mesh.children[0].material.opacity = 0.4 * (1 - eased * eased);
+                    
+                    // Shrink as it approaches
+                    const scale = 1 - eased * 0.7;
+                    p.mesh.scale.setScalar(scale);
+                }
+            }
+
+            updateStreamParticles(delta) {
+                const positions = this.streamPoints.geometry.attributes.position.array;
+                const count = positions.length / 3;
+                const targetPos = new THREE.Vector3(this.centerOffset.x, this.centerOffset.y, 0);
+                
+                for (let i = 0; i < count; i++) {
+                    this.streamLifes[i] += delta * 0.3;
+                    
+                    if (this.streamLifes[i] >= 1) {
+                        // Respawn at edge
+                        const angle = Math.random() * Math.PI * 2;
+                        const angle2 = (Math.random() - 0.5) * Math.PI;
+                        const radius = 20 + Math.random() * 20;
+                        
+                        positions[i * 3] = Math.cos(angle) * Math.cos(angle2) * radius + this.centerOffset.x;
+                        positions[i * 3 + 1] = Math.sin(angle2) * radius * 0.5 + this.centerOffset.y;
+                        positions[i * 3 + 2] = Math.sin(angle) * Math.cos(angle2) * radius * 0.3;
+                        
+                        this.streamLifes[i] = 0;
+                    }
+                    
+                    // Move toward center
+                    const t = this.streamLifes[i];
+                    const eased = this.easeInCubic(t);
+                    
+                    positions[i * 3] += (targetPos.x - positions[i * 3]) * eased * 0.02;
+                    positions[i * 3 + 1] += (targetPos.y - positions[i * 3 + 1]) * eased * 0.02;
+                    positions[i * 3 + 2] += (targetPos.z - positions[i * 3 + 2]) * eased * 0.02;
+                    
+                    // Spiral motion
+                    const spiralAngle = this.time * 0.5 + i * 0.1;
+                    const spiralRadius = (1 - t) * 0.5;
+                    positions[i * 3] += Math.cos(spiralAngle) * spiralRadius * delta * 10;
+                    positions[i * 3 + 1] += Math.sin(spiralAngle) * spiralRadius * delta * 10;
+                }
+                
+                this.streamPoints.geometry.attributes.position.needsUpdate = true;
+                this.streamPoints.material.opacity = 0.4 + Math.sin(this.time * 2) * 0.1;
+            }
+
+            updateCore(delta) {
+                // Breathing animation
+                const breathe = 1 + Math.sin(this.time * 0.8) * 0.08;
+                this.coreInner.scale.setScalar(breathe);
+                
+                // Rotate rings
+                this.coreGroup.children.forEach((child, i) => {
+                    if (child.geometry && child.geometry.type === 'RingGeometry') {
+                        child.rotation.z += delta * 0.1 * (i % 2 === 0 ? 1 : -1);
+                        child.rotation.x += delta * 0.05;
+                    }
+                });
+                
+                // Pulse glow
+                this.coreGlow.material.opacity = 0.25 + Math.sin(this.time * 1.2) * 0.1;
+                const glowScale = 25 + Math.sin(this.time * 0.7) * 3;
+                this.coreGlow.scale.set(glowScale, glowScale, 1);
+            }
+
+            easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            easeInCubic(t) {
+                return t * t * t;
+            }
+
+            bindEvents() {
+                window.addEventListener('resize', () => this.onResize());
+                window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            onMouseMove(e) {
+                this.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+                this.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                const delta = 0.016; // ~60fps
+                this.time += delta;
+                
+                // Smooth mouse following
+                this.mouse.x += (this.mouse.targetX - this.mouse.x) * 0.05;
+                this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.05;
+                
+                // Camera subtle movement based on mouse
+                this.camera.position.x = this.mouse.x * 3;
+                this.camera.position.y = -this.mouse.y * 2;
+                this.camera.lookAt(this.centerOffset.x, this.centerOffset.y, 0);
+                
+                // Update all elements
+                this.updateAminoAcids(delta);
+                this.updateStreamParticles(delta);
+                this.updateCore(delta);
+                
+                // Rotate ambient particles slowly
+                this.ambientPoints.rotation.y += delta * 0.02;
+                this.ambientPoints.rotation.x = Math.sin(this.time * 0.1) * 0.1;
+                
+                // Subtle core group rotation following mouse
+                this.coreGroup.rotation.y = this.mouse.x * 0.15;
+                this.coreGroup.rotation.x = this.mouse.y * 0.1;
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new MolecularSynthesis();
+        });
+    </script>
+</body>
+</html>
