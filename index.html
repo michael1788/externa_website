@@ -409,7 +409,9 @@
         footer {
             padding: 29px 64px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
             opacity: 0;
             animation: fadeIn 1s ease 1s forwards;
         }
@@ -440,12 +442,69 @@
                 padding: 40px 32px;
             }
 
+            .hero-text {
+                margin-bottom: 40px;
+            }
+
+            /* Hide contact section in text column on stacked layout */
+            .text-column .contact-section {
+                display: none;
+            }
+
             .animation-column {
                 width: 100%;
                 min-width: unset;
                 height: 50vh;
                 min-height: 400px;
             }
+
+            /* Show the mobile contact section */
+            .mobile-contact-section {
+                display: block;
+                padding: 40px 32px;
+                text-align: center;
+            }
+
+            /* Hide header location, show footer location */
+            header .location-indicator {
+                display: none;
+            }
+
+            .footer-location {
+                display: flex;
+            }
+        }
+
+        /* Hide mobile elements on desktop */
+        .mobile-contact-section {
+            display: none;
+        }
+
+        .mobile-contact-section.contact-section {
+            opacity: 0;
+            animation: fadeSlideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+        }
+
+        .mobile-contact-section .contact-link {
+            display: inline-flex;
+            width: auto;
+        }
+
+        .footer-location {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1rem;
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+            margin-bottom: 16px;
+        }
+
+        .footer-location svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
@@ -475,11 +534,6 @@
 
             .hero-text {
                 font-size: 1.2rem;
-            }
-
-            .contact-link {
-                width: 100%;
-                justify-content: center;
             }
 
             footer {
@@ -551,9 +605,32 @@
             <div class="animation-column">
                 <canvas id="webgl-canvas"></canvas>
             </div>
+
+            <!-- Mobile Contact Section (shown only on stacked layout) -->
+            <div class="mobile-contact-section contact-section">
+                <p class="contact-label">Partner with us</p>
+                <a href="mailto:info@externa.bio" class="contact-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="20" height="16" x="2" y="4" rx="2"/>
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    <span>info@externa.bio</span>
+                    <svg class="arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"/>
+                        <path d="m12 5 7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
         </div>
 
         <footer>
+            <div class="footer-location">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>Cambridge, MA</span>
+            </div>
             <span class="footer-text">© 2025 Externa Biosciences</span>
         </footer>
     </div>
