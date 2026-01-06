@@ -286,8 +286,8 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             animation: shimmer 8s ease-in-out infinite;
-            padding-left: 0.1em;
-            margin-left: -0.1em;
+            padding-left: 0.2em;
+            margin-left: -0.2em;
         }
 
         @keyframes shimmer {
@@ -466,6 +466,11 @@
 
             .text-column h1 {
                 font-size: clamp(2rem, 7vw, 2.75rem);
+            }
+
+            .text-column h1 em .text {
+                padding-left: 0.25em;
+                margin-left: -0.25em;
             }
 
             .hero-text {
