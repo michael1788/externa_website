@@ -480,12 +480,24 @@
                 width: 100%;
                 min-width: unset;
                 max-width: 100%;
-                padding: 40px 32px 40px 48px;
+                padding: 40px 32px 40px 32px;
                 overflow: visible;
+                text-align: center;
+            }
+
+            .text-column h1 {
+                text-align: center;
+            }
+
+            .text-column h1 em {
+                display: inline-block;
+                white-space: normal;
             }
 
             .hero-text {
                 margin-bottom: 40px;
+                margin-left: auto;
+                margin-right: auto;
             }
 
             /* Hide contact section in text column on stacked layout */
@@ -513,30 +525,93 @@
             .footer-location {
                 display: flex;
             }
+
+            /* ============================================
+               STACKED HEADER - Centered company name,
+               logo next to stealth indicator below
+               ============================================ */
+            header {
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                padding: 28px 32px;
+            }
+
+            .logo-lockup {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            /* Company name centered at top */
+            .logo-info {
+                order: -1;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .logo-text {
+                font-size: 1.5rem;
+                text-align: center;
+            }
+
+            /* Logo and stealth indicator in a row below */
+            .stealth-indicator {
+                flex-direction: row;
+                align-items: center;
+                gap: 12px;
+            }
+
+            /* Hide the logo from original position */
+            .logo-lockup > .logo-mark {
+                display: none;
+            }
+
+            /* Create a new row for logo + stealth */
+            .logo-info::after {
+                content: '';
+                display: none;
+            }
+
+            /* Restructure: stealth indicator contains logo visually */
+            .stealth-indicator::before {
+                content: '';
+                display: block;
+                width: 36px;
+                height: 36px;
+                background-image: url('logo.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                margin-right: 4px;
+            }
         }
 
         @media (max-width: 768px) {
             header {
-                padding: 28px 32px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 16px;
-            }
-
-            .logo-mark {
-                height: 44px;
+                padding: 24px 24px;
             }
 
             .logo-text {
-                font-size: 1.2rem;
+                font-size: 1.3rem;
+            }
+
+            .stealth-text {
+                font-size: 0.8rem;
+                letter-spacing: 0.15em;
+            }
+
+            .stealth-indicator::before {
+                width: 32px;
+                height: 32px;
             }
 
             .text-column h1 {
-                font-size: clamp(2.25rem, 8vw, 2.75rem);
+                font-size: clamp(2rem, 8vw, 2.75rem);
             }
 
             .hero-text {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
             }
 
             footer {
