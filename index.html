@@ -114,6 +114,7 @@
             display: flex;
             flex-direction: column;
             width: 100%;
+            overflow: visible;
         }
 
         header {
@@ -243,6 +244,7 @@
             padding: 0 64px;
             opacity: 0;
             animation: fadeSlideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+            overflow: visible;
         }
 
         @keyframes fadeSlideUp {
@@ -263,6 +265,7 @@
             line-height: 1.2;
             letter-spacing: -0.025em;
             margin-bottom: 28px;
+            overflow: visible;
         }
 
         .text-column h1 em {
@@ -270,6 +273,7 @@
             position: relative;
             display: block;
             white-space: nowrap;
+            overflow: visible;
         }
 
         .text-column h1 em .text {
@@ -476,7 +480,8 @@
                 width: 100%;
                 min-width: unset;
                 max-width: 100%;
-                padding: 40px 32px;
+                padding: 40px 32px 40px 40px;
+                overflow: visible;
             }
 
             .hero-text {
@@ -531,8 +536,8 @@
             }
 
             .text-column h1 em .text {
-                padding-left: 0.25em;
-                margin-left: -0.25em;
+                padding-left: 0.35em;
+                margin-left: -0.35em;
             }
 
             .hero-text {
